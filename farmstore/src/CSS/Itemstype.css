@@ -1,0 +1,98 @@
+.Container{
+    padding: 10px;
+    background-color: #e6f5e0;
+    display: flex;
+    height: 80vh;
+    justify-content: center;
+}
+.list-1{
+    margin: 5px;
+    padding: 10px;
+    height:100%;
+    width:60%;
+    background-color: #e6f5e0;
+    margin: 5px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    direction: rtl;
+}
+.list-2{
+    margin: 5px;
+    padding: 10px;
+    width:40%;
+    background-color: #e6f5e0;
+    position: sticky;
+    top:0;
+    align-self: flex-start;
+    height: 76vh;
+    border-radius: 3px;
+}
+.main{
+    background-color: #c9e9bc;
+    border-radius: 3px;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+.main img{
+    width: 97%;
+    height:40%;
+    border-radius: 3px;
+}
+.main p:nth-of-type(1){
+    font-size: 20px;
+    font-weight: bold;
+    height:50%;
+}
+.main p:nth-of-type(2){
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+.main p:nth-of-type(2) span{
+    margin: 3px;
+    padding: 3px;
+    width: 50%;
+    text-align: center;
+    font-size: 17px;
+    font-weight: bold
+}
+.main p:nth-of-type(3){
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+.main p:nth-of-type(3) span{
+    margin: 3px;
+    padding: 3px;
+    width: 50%;
+    text-align: center;
+    font-size: 17px;
+    font-weight: bold
+}
+
+.main button{
+    background-color: #5fc26f;
+    padding: 3px;
+    width: 80%;
+    border-radius: 3px;  
+}
+.main button:hover{
+    background-color: #368443;
+}
+.document{
+    padding: 3px;
+    margin:1px;
+    background-color: #c9e9bc;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 3px;
+}
+.document:hover{
+    background-color: #a3bb99;
+}
