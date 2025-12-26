@@ -10,7 +10,6 @@ export default function ProductCat() {
   const [error, setError] = useState(null); // Error state
   const [loading, setLoading] = useState(true); // Loading state
   const navigate = useNavigate();
-
   useEffect(() => {
     // Fetch data from the JSON file
     const fetchData = async () => {
@@ -27,34 +26,37 @@ export default function ProductCat() {
         setLoading(false);
       }
     };
-
+    
     fetchData();
   }, []);
+  
+  const category = localStorage.getItem("selectedCategory");
 
   const handleOneItem = (item) => {
     console.log(item);
     localStorage.setItem("selectedItem", JSON.stringify({
-      category: localStorage.getItem("selectedCategory"),
+      category: category,
       productName: item.productName,
+      imgAdd: `Images/${category}/${item.productName}.png`,
       // Include other necessary fields for the itemType page
       ...item
     }));
     navigate("/itemType"); // Navigate to the item details page
   };
-
+  
   useEffect(() => {
     const selectedCategory = localStorage.getItem("selectedCategory");
     
     if (selectedCategory && data && data[selectedCategory]) {
       const filtered = Array.isArray(data[selectedCategory]) 
-        ? data[selectedCategory] 
-        : [];
+      ? data[selectedCategory] 
+      : [];
       setFilteredData(filtered);
     } else {
       setFilteredData([]);
     }
   }, [data]);
-
+  
   return (
     <>
       <Carousel />

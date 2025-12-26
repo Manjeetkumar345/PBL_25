@@ -1,79 +1,33 @@
 const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+const mongoose = require("mongoose");
 const cors = require("cors");
+require("dotenv").config();
 
+const PORT = 8001;
 const app = express();
-app.use(cors());
 
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "http://localhost:3000",
-        methods: ["GET", "POST"]
-    }
-});
+// MongoDB Connection
+mongoose.connect('mongodb://127.0.0.1:27017/PBL')
+  .then(() => console.log("MongoDB Connected"))
+  .catch((error) => console.error("MongoDB Connection Failed:", error));
 
-const users = {}; // Store connected users with socket IDs as keys
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
 
-io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+// REST API Routes
+const authRoutes = require("./router/authRoutes");
+app.use("/api/auth", authRoutes);
 
-    // Handle username registration
-    socket.on("join_chat", (username) => {
-        // Validate username
-        if (typeof username !== 'string' || !['alice', 'bob'].includes(username.toLowerCase())) {
-            socket.emit("error", "Invalid username. Only Alice/Bob allowed");
-            return;
-        }
+const negotiateRoutes = require("./router/negotiateRoutes")
+app.use('/api/negotiate',negotiateRoutes)
 
-        // Check if username is already taken
-        if (Object.values(users).includes(username)) {
-            socket.emit("username_taken", "Username already in use");
-            return;
-        }
-
-        // Register user
-        users[socket.id] = username;
-        console.log(`${username} joined the chat`);
-        
-        // Notify all clients
-        io.emit("update_users", Object.values(users));
-        socket.emit("join_success", `Joined as ${username}`);
-    });
-
-    // Handle message sending
-    socket.on("send_message", (message) => {
-        const sender = users[socket.id];
-        
-        // Verify user is registered
-        if (!sender) {
-            socket.emit("error", "Join the chat before sending messages");
-            return;
-        }
-
-        // Validate message
-        if (typeof message !== 'string' || message.trim() === '') {
-            socket.emit("error", "Invalid message");
-            return;
-        }
-
-        const data = { sender, message: message.trim() };
-        console.log(`Message from ${data.sender}: ${data.message}`);
-        io.emit("receive_message", data); // Broadcast verified message
-    });
-
-    // Handle disconnection
-    socket.on("disconnect", () => {
-        const username = users[socket.id];
-        if (username) {
-            console.log(`${username} disconnected`);
-            delete users[socket.id];
-            io.emit("update_users", Object.values(users));
-        }
-    });
-});
-
-server.listen(8001, () => {
-    console.log("Secure chat server running on port 8001");
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

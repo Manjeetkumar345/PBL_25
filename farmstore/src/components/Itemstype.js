@@ -1,9 +1,11 @@
-import React, { useState,useEffect } from 'react';
-import "../CSS/Itemstype.css"
-import { addItem } from '../redux/slices/cartslices';
-import { useDispatch } from 'react-redux';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import "../CSS/Itemstype.css";
+import { addItem } from "../redux/slices/cartslices";
+import { useDispatch } from "react-redux";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
+
 export default function Itemstype() {
   const store = [
     {
@@ -77,103 +79,241 @@ export default function Itemstype() {
       price: 46,
     },
   ];
-  
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const [real,setReal] = useState([])
+
+  const [img, setImg] = useState("");
+  const [real, setReal] = useState([]);
 
   const [item, setItem] = useState({
+    _id: " ",
+    sellerId: " ",
     address: store[0].address,
     seed_breed: store[0].seed_breed,
     quantity: store[0].quantity,
     distance_km: store[0].distance_km,
+    price:store[0].price,
+    categoryName: " ",
+    description:"Lorem ipsum lorem ipsum lorem ipsum"
   });
 
-  const handleItems = (selectedItem) => {
-    setItem({
-      address: selectedItem.address,
-      seed_breed: selectedItem.seed_breed,
-      quantity: selectedItem.quantity,
-      distance_km: selectedItem.distance_km,
-      price:selectedItem.price,
-      categoryName: selectedItem.category,
-    });
-  };
 
-  useEffect(()=>{
+  const handleItems = (selectedItem) => {
+   setItem({
+    _id: selectedItem._id,
+    sellerId: selectedItem.sellerId,
+    address: selectedItem.address,
+    seed_breed: selectedItem.seedName,
+    quantity: selectedItem.quantity,
+    distance_km: 30,
+    price: selectedItem.pricePerKg,
+    // img: selectedItem.image,   // or selectedItem.imgAdd if you use that
+    categoryName: selectedItem.category,
+    description: selectedItem.description,
+  });
+};
+
+  useEffect(() => {
     const handleGetProducts = async () => {
       try {
-          const selectedItem = JSON.parse(localStorage.getItem("selectedItem"));
-          console.log("ItemType.js",selectedItem);
-          
-          if (!selectedItem) {
-              alert("No item Selected");
-          }
-          
-          const params = {
-              categoryName: selectedItem.category,
-              productName: selectedItem.productName
-          };
-          const response = await axios.get("http://localhost:8001/api/auth/getproduct", { params });
-          console.log("Response",response.data);
-          setReal(response.data);
-      } catch(error) {
-          console.error("Error fetching product:", error);
-          setReal([]);
+        // TO get selected Item image and may be name
+        const selectedItem = JSON.parse(localStorage.getItem("selectedItem"));
+        console.log("ItemType.js", selectedItem);
+        setImg(selectedItem.imgAdd);
+
+        if (!selectedItem) {
+          alert("No item Selected");
+        }
+
+        const params = {
+          categoryName: selectedItem.category,
+          productName: selectedItem.productName,
+        };
+        const response = await axios.get(
+          "http://localhost:8001/api/auth/getproduct",
+          { params }
+        );
+        console.log("Response", response.data);
+        setReal(response.data);
+      } catch (error) {
+        console.error("Error fetching product:", error);
+        setReal([]);
       }
     };
     handleGetProducts();
-  },[])
+
+   
+  }, []);
+
   return (
     <div className="Container">
-        <div className="list-1">
-          {/* Real data first */}
-          {real.map((e) => (
-            <div className="document" key={`real-${e._id}`}
-              onClick={() => handleItems({
-                address: e.address,
-                seed_breed: e.seedName,
-                quantity: e.quantity,
-                distance_km: 30, // Default distance
-                price: e.pricePerKg
-              })}>
-              {e.address} <br />
-              Seed: {e.seedName} <br />
-              Quantity: {e.quantity} kg<br/>
-              Price: {e.pricePerKg} per kg
+      <div className="list-1">
+        {/* // In your list-1 div, change this: */}
+        {real.map((e) => (
+          <div
+            className="document"
+            key={`real-${e._id}`}
+           onClick={() => handleItems(e)}
+          >
+            <h1 className="text-2xl">
+            Seed: {e.seedName}</h1>
+            {e.address} <br />
+            Quantity: {e.quantity} kg
+            <br />
+            Price: {e.pricePerKg} per kg
+          </div>
+        ))}
+
+        {/* // And change this: */}
+        {real.length === 0 &&
+          store.map((e) => (
+            <div
+              className="document"
+              key={`dummy-${e.address}`}
+              onClick={() => handleItems(e)}
+            >
+              <div className="">
+                  <section className="text-xl">Seed: {e.seed_breed}</section>
+                  <section>{e.address}</section>
+              </div>
+              <div className="flex">
+                <section> Quantity: {e.quantity} kg
+                </section>
+                <section> Price: {e.price} per kg
+                </section>
+              </div>
+              <div>{e.description}</div>
             </div>
           ))}
+      </div>
 
-          {/* Dummy data if no real data exists */}
-          {real.length === 0 && store.map((e) => (
-            <div className="document" key={`dummy-${e.address}`}
-              onClick={() => handleItems(e)}>
-              {e.address} <br />
-              Seed: {e.seed_breed} <br />
-              Quantity: {e.quantity} kg<br/>
-              Price: {e.price} per kg
-            </div>
-          ))}
-        </div>
-        <div className="list-2">
-            <div className="main">
-              <img src="/Img/download.jpeg" alt="" />
-              <p>Address: {item.address}</p>
-              <p> 
-                <span>Seed: {item.seed_breed}</span>
-                <span>Distance: {item.distance_km} km</span>
-              </p>
-              <p>
-              <span>Quantity: {item.quantity} kg</span>
-              <span onClick={()=> navigate('/negotiate')}>Negotiate</span>
-              <span>Price:{item.price} per kg</span>
-              </p>
-              <button onClick={()=> dispatch(addItem({seed_breed: item.seed_breed,quantity:item.quantity,pricePerKg:item.price,
-                category:item.categoryName
-              }))}>Add To WishList </button>
-            </div>
-
-        </div>
+      <ProductInfo item={item} img={img}/>
     </div>
   );
 }
+
+
+
+const ProductInfo = ({item,img})=>{
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+  const buyerId = user?.id;
+
+  useEffect(() => {
+    const loadAcceptedItems = async () => {
+      if (!buyerId) return;
+
+      const negotiations = await handleAcceptedItems(buyerId);
+
+      negotiations.forEach((neg) => {
+        const product = neg.productId; // FULL product details populated
+
+        if (!product) return; // safety
+
+        dispatch(
+          addItem({
+            productid: product._id,
+            sellerId: product.sellerId,
+            seed_breed: product.seed_breed,
+            quantity: product.quantity,
+            pricePerKg: neg.finalPrice || product.price,
+            category: product.categoryName,
+            img:img
+          })
+        );
+      });
+    };
+
+    loadAcceptedItems();
+  }, [buyerId])
+
+
+
+  return(
+  <div className="list-2 m-2 p-4 w-2/5 bg-white rounded-2xl shadow-lg sticky top-5 self-start h-fit">
+        <div className="flex flex-col items-center">
+          {/* Product Image */}
+          <div className="w-full overflow-hidden rounded-xl shadow-md mb-4">
+            <img
+              src={
+                img ||
+                "https://images.unsplash.com/photo-1598966733531-9449e31f50df?w=600"
+              }
+              alt={item.seed_breed}
+              className="w-full h-64 object-cover object-center transform hover:scale-105 transition-transform duration-500"
+            />
+          </div>
+
+          {/* Product Info */}
+          <div className="w-full p-4 flex flex-col gap-2">
+            <h2 className="text-2xl font-bold text-green-800">
+              {item.seed_breed}
+            </h2>
+            <p className="text-gray-600">
+              <span className="font-semibold">Address:</span> {item.address}
+            </p>
+            <p className="text-gray-600">
+              <span className="font-semibold">Distance:</span>{" "}
+              {item.distance_km} km
+            </p>
+            <p className="text-gray-600">
+              <span className="font-semibold">Quantity:</span> {item.quantity}{" "}
+              kg
+            </p>
+            <p className="text-green-700 text-xl font-semibold">
+              Price: ₹{item.price} per kg
+            </p>
+          </div>
+
+          {/* Buttons */}
+          <div className="w-full flex gap-3 mt-4">
+            <button
+              onClick={() => navigate("/negotiate", { state: { item: item } })}
+              className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition"
+            >
+              Negotiate
+            </button>
+
+            <button
+              onClick={() =>
+                dispatch(
+                  addItem({
+                    productid:item._id,
+                    sellerId:item.sellerId,
+                    seed_breed: item.seed_breed,
+                    quantity: item.quantity,
+                    pricePerKg: item.price,
+                    category: item.categoryName,
+                    img: img,
+                  })
+                )
+              }
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition"
+            >
+              Add to Wishlist
+            </button>
+          </div>
+        </div>
+      </div>
+
+)}
+
+
+
+const handleAcceptedItems = async (buyerId) => {
+  try {
+    const response = await axios.post(
+      "http://localhost:8001/api/negotiate/getproduct",
+      { buyerId }
+    );
+
+    return response.data; // Already JSON
+  } catch (error) {
+    console.log("Accepted items fetch error:", error);
+    return [];
+  }
+};
+
+
+
+// on click on navigate item added to cart now after sending the confirm order the price is updated again

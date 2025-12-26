@@ -1,5 +1,5 @@
 const express = require("express");
-const { postRegistration, handleLogin, postSellProduct, getProduct,showProduct } = require("../controller/CRUD");
+const { postRegistration, handleLogin, postSellProduct, getProduct,showProduct,getUser } = require("../controller/CRUD");
 const router = express.Router();
 
 // Import Multer configuration
@@ -50,10 +50,10 @@ router.route("/product")
 router.route("/getproduct")
     .get(getProduct)
 
+router.route("/user")
+  .get(getUser);
 
 router.route("/showproducts")
     .get(showProduct)
 
-
-    
 module.exports = router;

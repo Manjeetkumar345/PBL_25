@@ -19,14 +19,35 @@ const productSchema = new mongoose.Schema({
     quantity: { type: Number, required: true },                 // Quantity available
     dateofHarvest: { type: String},                // Date of harvest
     dateofExpiry: { type: String},                // Date of expiry
-    pricePerKg: { type: Number, required: true },               // Price per kilogram
+    pricePerKg: { type: Number, required: true },              // Price per kilogram
     address: { type: String, required: true },                  // Address of the seller
     description:{type:String},
-    photo: { type: String},                    // URL or path to the product photo                  
+    img_path: { type: String},                    // URL or path to the product photo 
+    img_file:{type:String},                 
   }, {
     timestamps: true
 });
 
+const negotiationSchema = new mongoose.Schema({
+  sellerId:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true},
+  buyerId:{ type:mongoose.Schema.Types.ObjectId,ref:'User',required:true},
+  productId:{type:mongoose.Schema.Types.ObjectId, ref:'Product',required:true},
+  offeredPrice:{type:Number, required:true},
+  reoffer: { type: Number },
+  finalPrice: { type: Number },
+  status:{type:String, enum:['pending','accepted','rejected'],default:'rejected'},
+  createdAt:{type:Date,default:Date.now}
+})
+
+const notificationScehma = new mongoose.Schema({
+  sellerId:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true},
+  buyerId:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true},
+  negotiationId:{type:mongoose.Schema.Types.ObjectId, ref:'Negotiate',required:true},
+  status:{type:String, enum:['sent','recieved'],default:'sent'},
+  sentBy:{type:String,enum:['buyer','seller'],default:'buyer',required:true},
+  createdAt:{type:Date,default:Date.now},
+  updatedAt:{type:Date,default:Date.now}
+})
 // const transportSchema = new mongoose.Schema({
 //     transportAvailability: { type: Boolean, required: true }, // Availability status
 //     vehicleNo: { type: String, required: true, unique: true }, // Unique vehicle number
@@ -70,6 +91,8 @@ const productSchema = new mongoose.Schema({
 
 const User = mongoose.model('User',userSchema);
 const Product = mongoose.model('Product',productSchema);
+const Negotiate = mongoose.model('Negotiate',negotiationSchema);
+const Notification = mongoose.model('Notification',notificationScehma)
 // const Transport = mongoose.model('Transport',transportSchema);
 // const History = mongoose.model('History', historySchema);
 // const Payment = mongoose.model('Payment', paymentSchema);
@@ -78,6 +101,8 @@ const Product = mongoose.model('Product',productSchema);
 module.exports = {
     User,
     Product,
+    Negotiate,
+    Notification
     // Transport,
     // History,Payment,
 }

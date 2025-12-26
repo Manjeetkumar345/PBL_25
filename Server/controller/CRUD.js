@@ -1,9 +1,9 @@
-const { Product,Transport,User,Payment,History} = require('../models/database');
+const { Product,User,Negotiate,Notification} = require('../models/database');
 const bcrypt = require('bcrypt');
 
 // Registration
 async function postRegistration(req,res) {
-    console.log("post Registratiton");
+    // console.log("post Registratiton");
     try{
         const newBody = req.body;
         if(!newBody.name|| !newBody.email  || !newBody.number || !newBody.address || !newBody.role){
@@ -21,7 +21,7 @@ async function postRegistration(req,res) {
             address: newBody.address,
         })
         console.log(user);
-        return res.status(200).json({msg:"Success"})
+        return res.status(200).json({msg:"Success",user})
     }catch(error){
         if (error.code === 11000) { // Duplicate key error
             return res.status(400).json({ msg: "Email or phone number already exists" });
@@ -108,8 +108,6 @@ async function getProduct(req, res) {
         if (!categoryName || !productName) {
             return res.status(400).json({ message: "Category and productName are required" });
         }
-
-        
         // Filter by productName
         const result = await Product.find({ 
         categoryName: { $regex: new RegExp(categoryName, 'i') },
@@ -149,18 +147,241 @@ async function showProduct(req, res) {
         return res.status(500).json({ error: "Internal Server Error" });
     }
 }
+
+async function sentNegotiationRequest(req, res) {
+  try {
+    const { buyerId, sellerId, productId, negotiatedprice } = req.body;
+
+    // console.log("Sent Negotiation request", buyerId, sellerId, productId, negotiatedprice);
+
+    if (!buyerId || !sellerId || !productId) {
+      return res.status(400).json({ msg: "Missing buyerId, sellerId, or productId" });
+    }
+
+    if (buyerId === sellerId) {
+      return res.status(401).json({ msg: "No negotiation possible with yourself" });
+    }
+
+    if (negotiatedprice == 0) {
+      return res.status(402).json({ msg: "Invalid negotiation amount" });
+    }
+
+    // Use let because we may reassign it
+    let negotiation = await Negotiate.findOne({ buyerId, sellerId, productId });
+
+    if (!negotiation) {
+      negotiation = await Negotiate.create({
+        buyerId,
+        sellerId,
+        productId,
+        offeredPrice: negotiatedprice,
+        status: "pending",
+      });
+    } else {
+      negotiation = await Negotiate.findByIdAndUpdate(
+        negotiation._id,
+        {
+          $set: {
+            offeredPrice: negotiatedprice,
+            status: "pending",
+          },
+        },
+        { new: true }
+      );
+    }
+
+    // Notifications
+    await handleNotification({
+      sellerId,
+      buyerId,
+      negotiationId: negotiation._id,
+      sentBy: "buyer",
+      status: "sent",
+    });
+
+    return res.status(200).json({
+      msg: "The negotiation initiative has been taken",
+      negotiation,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ err: "Server error", error });
+  }
+}
+
+
+
+async function recievedNegotiationRequest(req,res){ // Server will send this negotiation info to seller
+    try{
+        const {sellerId} = req.query;
+        // console.log("recievde negociation ",sellerId);
+         if (!sellerId) return res.status(400).json({ msg: "Seller ID is required" });
+         
+        const negotiations = await Negotiate.find({ sellerId, status: "pending" })
+        .populate("buyerId", "name")
+        .populate("productId", "productName pricePerKg");
+
+        if (negotiations.length === 0)   return res.status(404).json({ msg: "No negotiation requests found" });
+        return res.status(200).json(negotiations)
+    }catch (error) {
+    console.error(error);
+    return res.status(500).json({ msg: "Server error", error });
+  }
+    
+}
+
+async function sentNegotiationResponse(req,res) {
+    try{
+        const {sellerId,buyerId,status,reoffer,productId}  = req.body
+
+        // console.log(" Sent nego response",sellerId,buyerId,status,reoffer,productId)
+
+        if (!sellerId || !buyerId || !productId)  return res.status(400).json({ msg: "Missing sellerId, buyerId, or productId" });
+        
+        const negotiation = await Negotiate.findOne({ sellerId, buyerId, productId });
+        if (!negotiation) return res.status(404).json({ msg: "Negotiation not found" });
+
+
+        if(status === 'rejected') negotiation.status = 'rejected';
+        
+        else if( status === 'pending' && Number(reoffer) > 0){
+            negotiation.status= 'pending',
+            negotiation.reoffer= reoffer
+            negotiation.finalPrice = reoffer;                   
+        }                  
+        else if( status === 'accepted'){
+            negotiation.status='accepted',
+            negotiation.finalPrice=negotiation.offeredPrice                
+        }
+        else return res.status(400).json({msg:"Negotiation Failed"})
+        await negotiation.save()
+        await handleNotification({
+            sellerId,
+            buyerId,
+            negotiationId:negotiation._id,
+            sentBy: 'seller',
+            status: 'sent'
+        });
+        return res.status(200).json({ msg: "Negotiation updated", negotiation });  
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(500).json({ msg: "Server error", error });
+  }
+}
+
+async function recievedNegotiationResponse(req,res){
+    try{
+        const { buyerId } = req.query;
+        console.log("Nego to buyer",buyerId);
+        if (!buyerId) return res.status(400).json({ msg: "Buyer ID required" });
+        
+        const products = await Negotiate.find({buyerId})
+        .populate("sellerId","name")
+        .populate("productId","productName pricePerKg")
+
+        if(products.length === 0) return res.status(400).json({msg:"Negotiation error"})
+            return res.status(200).json(products)
+    }catch (error) {
+        console.error(error);
+        return res.status(500).json({ msg: "Server error", error });
+    } 
+}
+
+// Create notification (called internally, no req/res here)
+async function handleNotification({ sellerId, buyerId, negotiationId, sentBy, status }) {
+  try {
+    if (!sellerId || !buyerId || !negotiationId || !sentBy) {
+      console.log("Missing fields for notification");
+      return null;
+    }
+
+    const data = await Notification.create({
+      sellerId,
+      buyerId,
+      negotiationId,
+      sentBy,
+      status: status || "sent",
+      updatedAt: Date.now(),
+    });
+
+    return data;
+  } catch (error) {
+    console.error("Notification error:", error);
+    return null;
+  }
+}
+
+// Fetch / update notifications
+async function captureNotifications(req, res) {
+  const { id, sentBy } = req.body;
+
+  try {
+    if (!id || !sentBy) {
+      return res.status(400).json({ msg: "Missing fields" });
+    }
+
+    const filter = sentBy === "seller"
+      ? { sellerId: id }
+      : { buyerId: id };
+
+    const data = await Notification.find(filter)
+      .populate("negotiationId", "status offeredPrice reoffer")
+      .populate("sellerId", "name")
+      .populate("buyerId", "name")
+      .sort({ updatedAt: -1 });
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ msg: "No notifications found" });
+    }
+
+    // Mark notifications as received
+    await Notification.updateMany(filter, { status: "received" });
+
+    return res.status(200).json(data);
+
+  } catch (error) {
+    console.error("Error capturing notifications:", error);
+    return res.status(500).json({ msg: "Server error" });
+  }
+}
+
+// POST /api/auth/getproduct
+async function handleAcceptedOffers(req, res) {
+  const { buyerId } = req.body;
+
+  if (!buyerId) {
+    return res.status(400).json({ msg: "Missing Buyer Id" });
+  }
+
+  try {
+    const accepted = await Negotiate.find({
+      buyerId,
+      status: "accepted"
+    })
+      .populate("productId")   // <- IMPORTANT
+      .populate("sellerId", "name");
+
+    return res.status(200).json(accepted);
+  } catch (error) {
+    console.error("Accepted fetch error:", error);
+    return res.status(500).json({ msg: "Server error" });
+  }
+}
+
+
 // async function postTransport(req, res) {
-//     try {
-//         const newBody = req.body;
-//         // Check if all required fields are provided
-//         if (!newBody.transportAvailability || !newBody.vehicleNo || !newBody.driverLicenceNo || !newBody.productId || !newBody.sellerId || !newBody.buyerId || !newBody.transportFee) {
+    //     try {
+        //         const newBody = req.body;
+        //         // Check if all required fields are provided
+        //         if (!newBody.transportAvailability || !newBody.vehicleNo || !newBody.driverLicenceNo || !newBody.productId || !newBody.sellerId || !newBody.buyerId || !newBody.transportFee) {
 //             return res.status(404).json({ msg: "All fields are required" });
 //         }
 
 //         // Create a new Transport record
 //         await Transport.create({
-//             transportAvailability: newBody.transportAvailability,
-//             vehicleNo: newBody.vehicleNo,
+    //             transportAvailability: newBody.transportAvailability,
+    //             vehicleNo: newBody.vehicleNo,
 //             driverLicenceNo: newBody.driverLicenceNo,
 //             productId: newBody.productId,
 //             sellerId: newBody.sellerId,
@@ -242,6 +463,7 @@ async function getUser(req, res) {
     }
 }
 
+
 async function getTransport(req, res) {
     try {
         const result = await Transport.findById(req.params.id);
@@ -288,6 +510,5 @@ module.exports = {
     postRegistration,postSellProduct,
     // postTransport,postHistory,postPayment,
     getUser,getProduct,getTransport,getHistory,getPayment,
-    handleLogin,showProduct,
-
+    handleLogin,showProduct,sentNegotiationRequest,recievedNegotiationRequest,sentNegotiationResponse,recievedNegotiationResponse,handleNotification,captureNotifications,handleAcceptedOffers
 }

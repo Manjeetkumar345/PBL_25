@@ -28,7 +28,12 @@ export default function Cart() {
       [index]: Math.max((prev[index] || 1) - 1, 1)
     }));
   };
+// My Domain
 
+
+ /// Here 
+
+  /////
   // Fetch seller's inventory
   useEffect(() => {
     const fetchcart = async () => {
@@ -48,10 +53,12 @@ export default function Cart() {
     };
     fetchcart();
   }, [id, role]);
-
+  
   // Calculate subtotal with proper schema field
   const subtotal = items.reduce((sum, item, index) => 
     sum + ((item.pricePerKg || 0) * (quantities[index] || 1)), 0);
+  
+  sessionStorage.setItem('total',subtotal.toFixed(2));
 
   if (loading) {
     return (
@@ -89,7 +96,7 @@ export default function Cart() {
                     <div key={index} className="p-6 flex flex-col sm:flex-row gap-6">
                       <div className="w-full sm:w-48 h-48 bg-gray-100 rounded-lg overflow-hidden">
                         <img 
-                          src={item.img_path || "https://via.placeholder.com/150"} 
+                          src={item.img} 
                           alt={item.productName}
                           className="w-full h-full object-cover"
                         />
@@ -115,10 +122,10 @@ export default function Cart() {
                           </div>
                           <div className="text-right">
                             <div className="text-2xl font-bold text-gray-800">
-                              ₹{(item.pricePerKg || 0).toFixed(2)}
+                              ₹{Number(item.pricePerKg || 0).toFixed(2)}
                             </div>
                             <div className="text-sm text-gray-500 line-through">
-                              ₹{((item.pricePerKg || 0) * 1.1).toFixed(2)}
+                              ₹{(Number(item.pricePerKg || 0) * 1.1).toFixed(2)}
                             </div>
                           </div>
                         </div>
@@ -146,6 +153,7 @@ export default function Cart() {
                           >
                             Remove
                           </button>
+                          
                         </div>
                       </div>
                     </div>
@@ -155,7 +163,7 @@ export default function Cart() {
                   <div className="flex justify-between items-center">
                     <div className="text-lg font-medium">
                       Subtotal ({items.length} items): 
-                      <span className="font-bold">₹{subtotal.toFixed(2)}</span>
+                      <span className="font-bold">₹{Number(subtotal).toFixed(2)}</span>
                     </div>
                     <div className="space-x-3">
                       <button
@@ -170,6 +178,12 @@ export default function Cart() {
                       >
                         Proceed to Checkout
                       </button>
+                      {/* <button
+                        className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                        onClick={() => navigate("/negotiate", { state: { item: item } })} // 2nd item ka do somthing
+                      >
+                        Negotiate
+                      </button> */}
                     </div>
                   </div>
                 </div>
@@ -180,48 +194,182 @@ export default function Cart() {
 
         {/* Seller Inventory View */}
         {role === 'seller' && (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            {store.length === 0 ? (
-              <div className="text-center p-12">
-                <h3 className="text-xl font-medium text-gray-700 mb-2">No products in your inventory</h3>
-                <button
-                  onClick={() => navigate('/add-product')}
-                  className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  Add New Product
-                </button>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {store.map((item, index) => (
-                  <div key={index} className="p-6 flex flex-col sm:flex-row gap-6 hover:bg-gray-50 transition-colors">
-                    <div className="w-full sm:w-48 h-48 bg-gray-100 rounded-lg overflow-hidden">
-                      <img 
-                        src={item.img_path || "https://via.placeholder.com/150"} 
-                        alt={item.productName}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h2 className="text-xl font-semibold text-gray-800">{item.productName}</h2>
-                          <div className="mt-4 space-y-2 text-sm text-gray-600">
-                            <div>Category: {item.categoryName || 'Vegetables'}</div>
-                            <div>Available Stock: {item.quantity} kg</div>
-                            <div>Price: ₹{(item.pricePerKg || 0).toFixed(2)} per kg</div>
-                            <div>Total Value: ₹{((item.pricePerKg || 0) * (item.quantity || 0)).toFixed(2)}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <SellerCart store = {store}/>
         )}
       </div>
     </div>
   );
 }
+
+const SellerCart = ({ store }) => {
+  const [offers, setOffers] = useState([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const user = JSON.parse(sessionStorage.getItem("user"));
+        if (!user?.id) return;
+
+        const response = await axios.get(
+          "http://localhost:8001/api/negotiate/recReq",
+          { params: { sellerId: user.id } }
+        );
+
+        setOffers(response.data || []);
+      } catch (err) {
+        console.error("Error fetching offers:", err);
+      }
+    };
+
+    fetchOffers();
+  }, []);
+
+  return (
+    <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      {store.length === 0 ? (
+        <div className="text-center p-12">
+          <h3 className="text-xl font-medium text-gray-700 mb-2">
+            No products in your inventory
+          </h3>
+          <button
+            onClick={() => navigate("/itemType")}
+            className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Add New Product
+          </button>
+        </div>
+      ) : (
+        <div className="divide-y">
+          {store.map((item) => (
+            <div
+              key={item._id}
+              className="p-6 flex flex-col sm:flex-row gap-6 hover:bg-gray-50 transition-colors"
+            >
+              <div className="w-full sm:w-48 h-48 bg-gray-100 rounded-lg overflow-hidden">
+                <img
+                  src={item.img_path || "https://via.placeholder.com/150"}
+                  alt={item.productName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="flex-1">
+                <div className="flex justify-between items-start">
+                  
+                  {/* PRODUCT INFO */}
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      {item.productName}
+                    </h2>
+
+                    <div className="mt-4 space-y-2 text-sm text-gray-600">
+                      <div>Category: {item.categoryName}</div>
+                      <div>Product: {item.seedName}</div>
+                      <div>Available Stock: {item.quantity} kg</div>
+                      <div>Price: ₹{item.pricePerKg} per kg</div>
+                      <div>Total Value: ₹{item.pricePerKg * item.quantity}</div>
+                    </div>
+                  </div>
+
+                  {/* OFFERS BOX */}
+                  <div className="w-[450px] bg-gray-50 border rounded-lg p-3 max-h-64 overflow-y-auto hide-scrollbar">
+                    <h3 className="text-lg font-semibold text-green-700 mb-2">
+                      Offers
+                    </h3>
+
+                    {offers
+                      .filter((o) => o.productId?._id === item._id)
+                      .map((offer) => (
+                        <OfferItem key={offer._id} offer={offer} />
+                      ))}
+
+                    {offers.filter((o) => o.productId?._id === item._id).length === 0 && (
+                      <div className="text-gray-500 text-sm">No offers yet</div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+const OfferItem = ({ offer }) => {
+  const [newPrice, setNewPrice] = useState(offer.offeredPrice);
+
+  // ✅ SAFE USER PARSING
+  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+  const sellerId = user?.id || null;
+
+  const sendResponse = async (type) => {
+    const payload = {
+      sellerId,
+      buyerId: offer.buyerId?._id || null,
+      productId: offer.productId?._id || null,
+      status: type,
+      reoffer: type === "pending" ? newPrice : null,
+    };
+
+    console.log("Sending:", payload);
+
+    await axios.post("http://localhost:8001/api/negotiate/sentRes", payload);
+    alert("Response sent!");
+  };
+
+  return (
+    <div className="w-full bg-white border rounded-lg p-3 shadow-sm mb-3">
+      <div className="flex justify-between items-center mb-2">
+        <span className="font-medium text-gray-700">
+          {offer.buyerId?.name}
+        </span>
+        <span className="text-green-600 font-semibold">
+          ₹{offer.offeredPrice} per kg
+        </span>
+      </div>
+
+      {/* RANGE FOR REOFFER */}
+      <div className="my-3">
+        <input
+          type="range"
+          min={offer.offeredPrice}
+          max={offer.offeredPrice + 50}
+          value={newPrice}
+          onChange={(e) => setNewPrice(e.target.value)}
+          className="w-full accent-green-600"
+        />
+        <p className="text-sm text-green-700 text-center mt-1">
+          New Offer: ₹{newPrice} per kg
+        </p>
+      </div>
+
+      <div className="flex gap-2 justify-end">
+        <button
+          className="px-3 py-1 bg-yellow-300 text-green-900 rounded-md hover:bg-yellow-400"
+          onClick={() => sendResponse("pending")}
+        >
+          Reoffer
+        </button>
+
+        <button
+          className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700"
+          onClick={() => sendResponse("accepted")}
+        >
+          Match
+        </button>
+
+        <button
+          className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
+          onClick={() => sendResponse("rejected")}
+        >
+          Reject
+        </button>
+      </div>
+    </div>
+  );
+};

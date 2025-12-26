@@ -6,8 +6,8 @@ import Navbar from './components/Navbar';
 // import Itemstype from './components/Itemstype';
 import ProductCat from './components/ProductCat';
 import Footer from './components/Footer';
-import Login from './components/Login'
-import SignIN from './components/SignIN';
+import Login from './Registration/Login'
+import SignIN from './Registration/SignIN';
 import Cart from './components/Cart';
 // import Sidebar from './components/Sidebar';
 import HomePage from './components/HomePage';
@@ -15,6 +15,7 @@ import Itemstype from './components/Itemstype';
 import Shhipping from './components/Shhipping';
 import Seller from './components/Seller';
 import Negotiate from './components/Negotiate';
+
 
 
 function App() {

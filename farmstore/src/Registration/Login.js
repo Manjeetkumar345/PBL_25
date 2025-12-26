@@ -30,7 +30,12 @@ export default function Login() {
         
         //Role Decided Here
         console.log("id login",response.data._id);
-        sessionStorage.setItem('user', JSON.stringify({ name: login.name,role:response.data.role,id:response.data._id}));
+        
+        sessionStorage.setItem('user', JSON.stringify({ 
+          name: login.name,
+          role:response.data.role,
+          id:response.data._id
+        }));
 
         if(response.data.role ==='buyer')    navigate('/');
         else navigate('/seller');

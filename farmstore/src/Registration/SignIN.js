@@ -30,8 +30,15 @@ export default function SignIN() {
       const response = await axios.post('http://localhost:8001/api/auth/register', register);
       if (response.status === 200) {
         alert(response.data.msg);
-        if(register.role === 'buyer')        navigate('/');
-        if(register.role === 'seller')        navigate('/seller');
+
+        sessionStorage.setItem('user', JSON.stringify({ 
+          name: register.name,
+          role:response.data.role,
+          id:response.data._id
+        }));
+        
+        if(register.role === 'buyer')        navigate('/login');
+        if(register.role === 'seller')        navigate('/login');
       }
     } catch (error) {
       if (error.response) {
