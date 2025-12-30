@@ -1,5 +1,11 @@
-.env
-farmstore/.env
-
-
+# dependencies
 node_modules/
+Server/node_modules/
+farmstore/node_modules/
+
+# env
+.env
+
+# build
+dist/
+build/
